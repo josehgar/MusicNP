@@ -1,0 +1,3 @@
+rich
+pynput
+yt_dlp
