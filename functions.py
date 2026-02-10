@@ -1,7 +1,6 @@
 import os, yt_dlp, csv, random, msvcrt
 import time
 from turtle import st
-from click import clear
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -20,12 +19,12 @@ cookiefile_path: str = ""
 console = Console()
 
 class MyLogger:
-    def debug(self, msg):
-        pass
     def warning(self, msg):
         pass
     def error(self, msg):
         console.print("[bold red]There was an error[/bold red]")
+    def debug(self, msg):
+        pass
 
 # It cleans the console screen depending on the OS
 def clear_screen():
@@ -75,7 +74,7 @@ def show_header():
             box=box.DOUBLE_EDGE
         )
     )
-    print()
+    print()   
     
 def show_configurations():
     info = Text()
@@ -142,11 +141,12 @@ def start_download():
                         {'key': 'FFmpegMetadata'},
                         {'key': 'EmbedThumbnail'},
                     ],
-                    'postprocessor_args': [
+                    'postprocessor_args': {
+                        'ffmpeg': [
                         '-metadata', f'title={song["Track Name"]}',
-                        '-metadata', f'artist={song["Artist Name(s)"].replace(";", ",")}',
+                        '-metadata', f'artist={song["Artist Name(s)"].replace(";", ", ")}',
                         '-metadata', f'album={song.get("Album Name", "Single")}',
-                    ]
+                    ]},
                 }
                 try:
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -216,7 +216,7 @@ def settings():
                     correct = True
                     settings()
                 else:
-                    text1 = "Not a valid path. Try again ('r' to cancel operation)"  
+                    text1 = "Not a valid path. Try again ('r' to cancel operation): "  
         case "2":
             text2 = "Enter your download file ('r' to cancel operation): "
             correct = False
@@ -244,10 +244,11 @@ def settings():
                     console.print("Cookie file registered", style="green")
                     time.sleep(0.5)
                     settings()
-                elif csv_input == 'r':
+                elif cookie == 'r':
                     correct = True
+                    settings()
                 else:
-                    text1 = "Not a valid path. Try again ('r' to cancel operation)"
+                    text3 = "Not a valid path. Try again ('r' to cancel operation): "
         case "m":
             clear_screen()
             main_menu()
