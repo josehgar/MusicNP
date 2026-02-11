@@ -1,6 +1,6 @@
 import os, yt_dlp, csv, random, msvcrt
 import time
-from turtle import st
+from tqdm import tqdm
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -24,7 +24,10 @@ class MyLogger:
     def error(self, msg):
         console.print("[bold red]There was an error[/bold red]")
     def debug(self, msg):
-        pass
+        if '[download]' in msg and '%' in msg:
+            print(msg, end='\r')
+        else:
+            pass
 
 # It cleans the console screen depending on the OS
 def clear_screen():
@@ -93,7 +96,7 @@ def show_configurations():
         )
     )
     print()
-    
+        
 def show_options():
     options = Text()
     options.append(f"1. Start Downloading\n", style="bold hot_pink")
@@ -112,6 +115,7 @@ def show_options():
     print()
 
 def start_download():
+    consecutive_fails: int = 0
     global download_path, csv_path, cookiefile_path
     if download_path == "" or csv_path == "" or cookiefile_path == "":
         console.print("Failed to proceed. Check if some of the configuration fields are empty.", style="bold red")
@@ -119,9 +123,24 @@ def start_download():
         main_menu()
     else:
         clear_screen()
-        with open(csv_path, mode = 'r', encoding = 'utf-8') as csvfile:
+        with open(csv_path, mode = 'r', encoding = 'utf-8') as csvfile:    
             reader = csv.DictReader(csvfile, delimiter=',')
             for index, song in enumerate(reader, start=1):
+                if consecutive_fails >= 8:
+                    correct: bool = False
+                    text = "Program is failing repeatedly. Do you want to continue (Y | N): "
+                    while not correct:
+                        ans = input(text)
+                        if ans.lower() == 'y':
+                            consecutive_fails = 0
+                            correct = True
+                            continue
+                        elif ans.lower() == 'n':
+                            correct = True
+                            main_menu()
+                            return
+                        else:
+                            text = "Not a valid answer. Try again (Y | N): "
                 query = f"{song['Track Name']} - {song['Artist Name(s)']}"
                 search_query = f"ytsearch1:{query}"
                 console.print(f"{index} [bold green]DOWNLOADING:[/bold green] {query}")
@@ -144,7 +163,7 @@ def start_download():
                     'postprocessor_args': {
                         'ffmpeg': [
                         '-metadata', f'title={song["Track Name"]}',
-                        '-metadata', f'artist={song["Artist Name(s)"].replace(";", ", ")}',
+                        '-metadata', f'artist={song["Artist Name(s)"]}',
                         '-metadata', f'album={song.get("Album Name", "Single")}',
                     ]},
                 }
@@ -152,11 +171,31 @@ def start_download():
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         ydl.download([search_query])
                     espera = round(random.uniform(3,8), 2)
+                    consecutive_fails = 0
                     console.print(f"Waiting {espera} seconds...", style="bold yellow")
                     time.sleep(espera)
                     index += 1
                 except Exception as e:
                     console.print(f"[bold red]There was an error installing the current track. Skipping[/bold red]")
+                    consecutive_fails += 1
+                    index += 1
+            corr = False
+            clear_screen()
+            while not correct:
+                text = "Download finished! Do you want to go back to the menu? (Y|N): "
+                answer = console.input("Download finished! Do you want to go back to the menu? (Y|N): ", style = "bold green")
+                if answer.lower() == 'y':
+                    corr = True
+                    main_menu()
+                elif answer.lower() == 'n':
+                    corr = True
+                    exit_from_app()
+                else:
+                    clear_screen()
+                    text = "Not valid answer. Do you want to go back to the menu? (Y|N): "
+                    
+            
+            
 
 def help_info():
     clear_screen()
@@ -306,3 +345,4 @@ def exit_from_app():
 def flush_input():
     while msvcrt.kbhit():
         msvcrt.getch()
+    
