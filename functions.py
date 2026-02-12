@@ -22,7 +22,7 @@ class MyLogger:
     def warning(self, msg):
         pass
     def error(self, msg):
-        console.print("[bold red]There was an error[/bold red]")
+        pass
     def debug(self, msg):
         if '[download]' in msg and '%' in msg:
             print(msg, end='\r')
@@ -41,7 +41,7 @@ def main_menu():
     show_options()
     try:
         opt = int(input(text).strip())
-        if not (opt > 0 and opt < 6):
+        if not (opt > 0 and opt < 8):
             os.system('cls')
             main_menu()
         else:
@@ -55,7 +55,11 @@ def main_menu():
                 case 4:
                     credits_info()
                 case 5:
-                    exit_from_app()             
+                    save_settings()
+                case 6:
+                    load_settings()
+                case 7:
+                    exit_from_app()            
     except ValueError:
         os.system('cls')
         main_menu()
@@ -103,7 +107,9 @@ def show_options():
     options.append(f"2. Help\n", style="bold hot_pink")
     options.append(f"3. Settings\n", style="bold hot_pink")
     options.append(f"4. Credits\n", style="bold hot_pink")
-    options.append(f"5. Exit", style="bold hot_pink")
+    options.append(f"5. Save settings\n", style="bold hot_pink")
+    options.append(f"6. Load settings\n", style="bold hot_pink")
+    options.append(f"7. Exit", style="bold hot_pink")
     console.print(
         Panel(
             options,
@@ -144,6 +150,14 @@ def start_download():
                 query = f"{song['Track Name']} - {song['Artist Name(s)']}"
                 search_query = f"ytsearch1:{query}"
                 console.print(f"{index} [bold green]DOWNLOADING:[/bold green] {query}")
+                album_val = define_album(song["Track Name"], song["Album Name"])
+                artists_v = song["Artist Name(s)"].replace(";","/")
+                ffmpeg_args = [
+                    '-metadata', f'title={song["Track Name"]}',
+                    '-metadata', f'artist={artists_v}',
+                ]
+                if album_val:
+                    ffmpeg_args.extend(['-metadata', f'album={album_val}'])
                 ydl_opts = {
                     'format': 'bestaudio/best',
                     'cookiefile': cookiefile_path,
@@ -161,11 +175,8 @@ def start_download():
                         {'key': 'EmbedThumbnail'},
                     ],
                     'postprocessor_args': {
-                        'ffmpeg': [
-                        '-metadata', f'title={song["Track Name"]}',
-                        '-metadata', f'artist={song["Artist Name(s)"]}',
-                        '-metadata', f'album={song.get("Album Name", "Single")}',
-                    ]},
+                        'ffmpeg': ffmpeg_args
+                    },
                 }
                 try:
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -181,7 +192,7 @@ def start_download():
                     index += 1
             corr = False
             clear_screen()
-            while not correct:
+            while not corr:
                 text = "Download finished! Do you want to go back to the menu? (Y|N): "
                 answer = console.input("Download finished! Do you want to go back to the menu? (Y|N): ", style = "bold green")
                 if answer.lower() == 'y':
@@ -345,4 +356,61 @@ def exit_from_app():
 def flush_input():
     while msvcrt.kbhit():
         msvcrt.getch()
+        
+def save_settings():
+    if csv_path == "" or download_path == "" or cookiefile_path == "":
+        console.print("ERROR: All settings must be defined.", style="bold red")
+        time.sleep(1)
+        main_menu()
+    else:
+        with open('settings.txt', 'w') as save:
+            save.write(f"csv={csv_path}\n")
+            save.write(f"cookie={cookiefile_path}\n")
+            save.write(f"path={download_path}")
+        console.print("Settings saved successfully", style="bold green")
+        time.sleep(1)
+        main_menu()
+        
+def load_settings():
+    global csv_path, cookiefile_path, download_path
+    ruta_archivo = 'settings.txt'
+    if os.path.exists(ruta_archivo) and correct_format(ruta_archivo):
+        with open(ruta_archivo, 'r', encoding='utf-8') as s:
+            lineas = [linea.strip() for linea in s.readlines() if linea.strip()]
+            csv_path = lineas[0].split('=', 1)[1]
+            cookiefile_path = lineas[1].split('=', 1)[1]
+            download_path = lineas[2].split('=', 1)[1]
+            console.print("Loaded successfully", style="bold green")
+            time.sleep(1)
+            main_menu()          
+    else:
+        console.print("Error: settings.txt missing or invalid format", style="bold red")
+        time.sleep(2)
+        main_menu()
+
+def correct_format(ruta: str) -> bool:
+    if not os.path.exists(ruta):
+        return False
+    try:
+        with open(ruta, 'r', encoding='utf-8') as fich:
+            lineas = [linea.strip() for linea in fich.readlines() if linea.strip()]
+            if len(lineas) != 3:
+                return False
+            partes_csv = lineas[0].split('=', 1)
+            partes_cookie = lineas[1].split('=', 1)
+            partes_path = lineas[2].split('=', 1)
+            is_csv = (partes_csv[0] == 'csv' and 
+                      partes_csv[1].lower().endswith(".csv") and 
+                      os.path.isfile(partes_csv[1]))
+            is_cookie = (partes_cookie[0] == 'cookie' and 
+                         partes_cookie[1].lower().endswith(".txt") and 
+                         os.path.isfile(partes_cookie[1]))
+            is_path = (partes_path[0] == 'path' and 
+                       os.path.isdir(partes_path[1]))
+            return is_csv and is_cookie and is_path
+    except Exception:
+        return False
+    
+def define_album(trackname: str, album: str) -> str:
+    return None if trackname == album else album
     

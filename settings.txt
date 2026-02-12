@@ -1,0 +1,3 @@
+csv=C:\Users\Jose\Downloads\Liked_Songs.csv
+cookie=C:\Users\Jose\Downloads\www.youtube.com_cookies.txt
+path=C:\Users\Jose\OneDrive\Desktop\musci
